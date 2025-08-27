@@ -1,0 +1,11 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Aizliedz commit, ja staged failos ir Google service konta atslēgas
+if git diff --cached --name-only | grep -Ei 'serviceaccount.*\.json|sa-.*\.json'; then
+  echo "❌ Service account JSON failus nedrīkst komitēt. Noņem tos no staging!"
+  exit 1
+fi
+
+# Noklusēti Husky testi, ja tādi ir
+npm test --if-present
