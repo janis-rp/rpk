@@ -1,0 +1,50 @@
+name: Deploy to Firebase (Hosting + Rules)
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps (root)
+        run: npm ci
+
+      - name: Build web
+        run: npm run build
+
+      - name: Firebase Preview on PR
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_RPKLIENTIEM }}
+          projectId: rpklientiem
+          channelId: pr-${{ github.event.number }}
+
+      - name: Deploy Hosting + Rules on main
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_RPKLIENTIEM }}
+          projectId: rpklientiem
+          channelId: live
+
+      - name: Deploy Firestore Rules (main only)
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: w9jds/firebase-action@v13.28.1
+        with:
+          args: deploy --only firestore:rules
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_RPKLIENTIEM }}
