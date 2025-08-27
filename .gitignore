@@ -1,0 +1,39 @@
+# ENV
+.env
+.env.*
+!.env.example
+*.local
+
+# Node
+**/node_modules/
+**/npm-debug.log*
+**/yarn-*.log*
+**/pnpm-debug.log
+**/.pnpm-store/
+
+# Build/output
+**/dist/
+**/build/
+**/.next/
+**/.nuxt/
+**/.cache/
+**/.parcel-cache/
+**/.turbo/
+**/.vite/
+
+# Tests
+**/coverage/
+
+# Firebase
+.firebase/
+**/firebase-debug.log
+**/ui-debug.log
+.firebaserc.local
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+serviceAccountKey.json
+sa-rpklientiem.json

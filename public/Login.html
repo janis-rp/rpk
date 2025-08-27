@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="lv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Raibā Pupa — Pieslēgties</title>
+  <style>
+    /* Smilšu/brūnais minimālais stils */
+    :root{
+      --sand:#f8f4f0; --sandLight:#fffaf5; --sandRing:#eadcc8; --sandBorder:#d3bfa7;
+      --brown:#5e4634; --cocoa:#8c6239; --caramel:#a67c52;
+    }
+    *{box-sizing:border-box} body{margin:0; background:var(--sand); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+    .wrap{min-height:100svh; display:grid; place-items:center; padding:24px; position:relative}
+    .blur1,.blur2{position:absolute; filter:blur(60px); opacity:.6; z-index:-1; border-radius:999px}
+    .blur1{width:300px;height:300px;background:var(--sandRing);left:-60px;top:-60px}
+    .blur2{width:340px;height:340px;background:var(--sandBorder);right:-40px;bottom:-80px;opacity:.5}
+    .card{width:100%; max-width:420px; background:var(--sandLight); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.12); padding:28px; border:1px solid var(--sandRing)}
+    h1{margin:0 0 6px; font-size:24px; color:var(--brown); text-align:center}
+    p.sub{margin:0 0 20px; color:color-mix(in oklab, var(--cocoa) 80%, white); text-align:center; font-size:14px}
+    .logo{width:48px;height:48px;background:var(--caramel); color:#fff; display:grid; place-items:center; margin:0 auto 12px; border-radius:14px; font-weight:700}
+    .btn{width:100%; padding:12px 14px; border-radius:16px; border:none; font-weight:700; cursor:pointer; transition:.2s; box-shadow:0 2px 6px rgba(0,0,0,.08)}
+    .btn.primary{background:var(--caramel); color:#fff}
+    .btn.primary:hover{background:var(--cocoa)}
+    .btn.ghost{background:#fff; color:var(--brown); border:1px solid var(--sandBorder)}
+    .btn.ghost:hover{background:var(--sand)}
+    .row{display:flex; gap:10px; margin:10px 0}
+    .input{width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--sandBorder); background:#fff; color:var(--brown)}
+    .input:focus{outline:none; border-color:var(--caramel); box-shadow:0 0 0 6px color-mix(in srgb, var(--caramel) 20%, transparent)}
+    .sep{display:flex; align-items:center; gap:10px; margin:18px 0}
+    .sep .line{height:1px; background:var(--sandRing); flex:1}
+    .sep .txt{font-size:12px; color:color-mix(in oklab, var(--brown) 70%, white)}
+    .muted{font-size:12px; color:color-mix(in oklab, var(--brown) 70%, white); text-align:center; margin-top:14px}
+    .err{color:#c0392b; font-size:13px; margin:6px 0}
+    .ok{color:#2e7d32; font-size:13px; margin:6px 0}
+    .icons{width:18px;height:18px; vertical-align:-3px}
+    .links{display:flex; justify-content:space-between; font-size:12px; margin:8px 0 0}
+    a{color:var(--cocoa); text-decoration:none} a:hover{color:var(--brown)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="blur1"></div><div class="blur2"></div>
+
+    <div class="card">
+      <div class="logo">✓</div>
+      <h1>Raibā Pupa portāls</h1>
+      <p class="sub">Pieslēdzies ar e-pastu vai sociālo kontu</p>
+
+      <form id="emailForm">
+        <input id="email" class="input" type="email" placeholder="E-pasts" required />
+        <div class="row">
+          <input id="pass" class="input" type="password" placeholder="Parole" required />
+        </div>
+        <div id="err" class="err" style="display:none"></div>
+        <button class="btn primary" type="submit" id="emailBtn">Pieslēgties</button>
+      </form>
+
+      <div class="sep"><div class="line"></div><div class="txt">vai</div><div class="line"></div></div>
+
+      <div class="row">
+        <button class="btn ghost" id="googleBtn">
+          <!-- G ikona -->
+          <svg class="icons" viewBox="0 0 533.5 544.3"><path fill="#4285F4" d="M533.5 278.4c0-18.5-1.7-36.3-5-53.6H272v101.5h147c-6.3 34-25.2 62.8-53.8 82.1v68.1h86.7c50.7-46.7 81.6-115.6 81.6-198.1z"/><path fill="#34A853" d="M272 544.3c72.8 0 134-24.1 178.7-65.8l-86.7-68.1c-24.1 16.2-55 25.8-92 25.8-70.7 0-130.7-47.7-152.2-111.8H31.5v70.3C76 487.6 167.8 544.3 272 544.3z"/><path fill="#FBBC05" d="M119.8 324.4c-10.1-30.3-10.1-63.7 0-94l.1-70.3H31.5c-42.3 84.6-42.3 149.9 0 234.5l88.3-70.2z"/><path fill="#EA4335" d="M272 107.7c38.4-.6 75.3 13.9 103.7 40.7l77.3-77.3C405.9 24.6 344.8-.1 272 0 167.8 0 76 56.7 31.5 162.1l88.3 70.3C141.3 155.3 201.3 107.6 272 107.7z"/></svg>
+          Pieslēgties ar Google
+        </button>
+      </div>
+
+      <div class="row">
+        <button class="btn ghost" id="fbBtn">
+          <!-- f ikona -->
+          <svg class="icons" viewBox="0 0 24 24"><path d="M22.675 0h-21.35C.595 0 0 .594 0 1.326v21.348C0 23.406.595 24 1.325 24h11.494v-9.294H9.847v-3.622h2.972V8.413c0-2.943 1.796-4.548 4.416-4.548 1.256 0 2.337.093 2.651.135v3.073l-1.82.001c-1.427 0-1.703.678-1.703 1.673v2.195h3.406l-.444 3.622h-2.962V24h5.807C23.406 24 24 23.406 24 22.674V1.326C24 .594 23.406 0 22.675 0z"/></svg>
+          Pieslēgties ar Facebook
+        </button>
+      </div>
+
+      <div id="status" class="ok" style="display:none"></div>
+      <p class="muted">Jauna parole? <a href="#">Atjaunot</a></p>
+      <div class="links">
+        <a href="/">← Atpakaļ uz portālu</a>
+        <a href="#">Reģistrēties</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase CDN moduļi -->
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getAuth, setPersistence, browserLocalPersistence,
+    signInWithEmailAndPassword, signInWithPopup,
+    GoogleAuthProvider, FacebookAuthProvider,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyACV7R3NlNhCSoHoPwuPu1lRiSu1_L3IqM",
+    authDomain: "rpklientiem.firebaseapp.com",
+    projectId: "rpklientiem",
+    storageBucket: "rpklientiem.firebasestorage.app",
+    messagingSenderId: "1087370626129",
+    appId: "1:1087370626129:web:ba3e29761b7ad77ebda470",
+    measurementId: "G-20WQLL2F2W"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  setPersistence(auth, browserLocalPersistence).catch(()=>{});
+
+    const $ = (id) => document.getElementById(id);
+    const show = (el, on=true)=>{ el.style.display = on ? "" : "none"; };
+
+    $("emailForm").addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      $("err").textContent = ""; show($("err"), false);
+      $("emailBtn").disabled = true;
+      try{
+        await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value);
+        location.href = "/"; // pēc login – uz portāla sakni
+      }catch(err){
+        $("err").textContent = "Nepareizs e-pasts vai parole."; show($("err"), true);
+      }finally{
+        $("emailBtn").disabled = false;
+      }
+    });
+
+    $("googleBtn").addEventListener("click", async ()=>{
+      try{
+        await signInWithPopup(auth, new GoogleAuthProvider());
+        location.href = "/";
+      }catch(err){
+        $("err").textContent = "Google pieslēgšanās neizdevās."; show($("err"), true);
+      }
+    });
+
+    $("fbBtn").addEventListener("click", async ()=>{
+      try{
+        await signInWithPopup(auth, new FacebookAuthProvider());
+        location.href = "/";
+      }catch(err){
+        $("err").textContent = "Facebook pieslēgšanās neizdevās."; show($("err"), true);
+      }
+    });
+
+    onAuthStateChanged(auth, (user)=>{
+      if(user){
+        $("status").textContent = "Pieslēdzies kā: " + (user.displayName || user.email);
+        show($("status"), true);
+      } else {
+        show($("status"), false);
+      }
+    });
+  </script>
+</body>
+</html>

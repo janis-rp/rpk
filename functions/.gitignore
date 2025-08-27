@@ -1,0 +1,38 @@
+# ── ENV (nekad nerepozitorijā) ───────────────────────────────
+.env
+.env.*
+!.env.example
+*.local
+
+# ── Node / pnpm / yarn logi ─────────────────────────────────
+**/node_modules/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log
+**/.pnpm-store/
+
+# ── Build/output mapes (Next/Vite/CRA u.c.) ─────────────────
+**/dist/
+**/build/
+**/.next/
+**/.nuxt/
+**/.cache/
+**/.parcel-cache/
+**/.turbo/
+**/.vite/
+
+# ── Testi/coverage ──────────────────────────────────────────
+**/coverage/
+
+# ── Firebase/emulatori ──────────────────────────────────────
+.firebase/
+**/firebase-debug.log
+**/ui-debug.log
+.firebaserc.local
+
+# ── IDE/OS ──────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
