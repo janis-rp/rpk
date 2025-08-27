@@ -1,10 +1,10 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function ProtectedRoute() {
+export default function AdminRoute({ children }) {
   const { user, role } = useAuth?.() || {};
 
-  // Ja nav zināms statuss (gaidām context ielādi)
+  // Kamēr AuthContext ielādējas
   if (user === undefined || role === undefined) {
     return (
       <div className="min-h-screen bg-sand flex items-center justify-center p-6">
@@ -15,8 +15,13 @@ export default function ProtectedRoute() {
     );
   }
 
-  // Neielogots -> uz /login
-  if (!user) return <Navigate to="/login" replace />;
+  // Neielogots -> uz /auth
+  if (!user) return <Navigate to="/auth" replace />;
 
-  return <Outlet />;
+  // Tikai admin/manager drīkst
+  if (!(role === 'admin' || role === 'manager')) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
 }

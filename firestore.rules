@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function isLoggedIn() { return request.auth != null; }
+
+    // Null-safe piekļuve users/{uid}
+    function me() {
+      return isLoggedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data
+        : null;
+    }
+
+    function hasRole(r) { return me() != null && me().role == r; }
+
+    // Atļaujam adminu noteikt gan pēc roles dokumentā, gan pēc custom claim
+    function isAdminOrManager() {
+      return (isLoggedIn() && request.auth.token.admin == true) || hasRole("admin") || hasRole("manager");
+    }
+
+    // Vienota īpašnieka pārbaude pēc parentId vai parentIds masīva
+    function isOwnerByParentRef(data) {
+      return isLoggedIn() && (
+        (data.parentId == request.auth.uid) ||
+        (data.parentIds is list && data.parentIds.hasAny([request.auth.uid]))
+      );
+    }
+
+    // ── users ─────────────────────────────────────────────────────────────────
+    match /users/{uid} {
+      // Lasīt: pats lietotājs vai admin/manager
+      allow read: if isLoggedIn() && (request.auth.uid == uid || isAdminOrManager());
+
+      // Izveidot: pats par sevi
+      allow create: if isLoggedIn() && request.auth.uid == uid;
+
+      // Atļaujam lietotājam labot, bet nevar mainīt role un groupIds pats sev
+      allow update: if isLoggedIn() && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.groupIds == resource.data.groupIds;
+
+      // Pilnas tiesības admin/manager (create/update/delete)
+      allow write: if isAdminOrManager();
+    }
+
+    // ── mergeIntents (klienta iesniegtie “apvienošanas nodomi”) ──────────────
+    // Klients drīkst TIKAI izveidot savu ierakstu; lasīt/rediģēt/dzēst — tikai Admin/Manager.
+    match /mergeIntents/{uid} {
+      allow create: if isLoggedIn() && request.auth.uid == uid;
+      allow read, update, delete: if isAdminOrManager();
+    }
+
+    // ── applications (pieteikumi) ────────────────────────────────────────────
+    match /applications/{id} {
+      allow create: if isLoggedIn() && request.resource.data.parentId == request.auth.uid;
+
+      allow read: if isLoggedIn() && (
+        (resource.data.parentId == request.auth.uid) || isAdminOrManager()
+      );
+
+      // Vecāks var labot/dzēst savu pieteikumu līdz apstiprināšanai; Admin/Manager jebkurā brīdī
+      allow update, delete: if isLoggedIn() && (
+        (resource.data.parentId == request.auth.uid && resource.data.status != "approved")
+        || isAdminOrManager()
+      );
+    }
+
+    // ── children (bērnu ieraksti) ────────────────────────────────────────────
+    // JAUNUMS: Vecāks var CREATE/UPDATE/DELETE tikai savus bērnus (pēc parentId/parentIds).
+    match /children/{id} {
+      // Lasīt: savi bērni vai admin/manager
+      allow read: if isAdminOrManager() || isOwnerByParentRef(resource.data);
+
+      // Izveidot: lietotājs drīkst izveidot tikai ierakstu, kur viņš ir vecāks
+      allow create: if isOwnerByParentRef(request.resource.data);
+
+      // Labot/dzēst: saviem bērniem vai admin/manager
+      allow update, delete: if isAdminOrManager() || isOwnerByParentRef(resource.data);
+    }
+
+    // ── adminData / citi admin-only resursi (piem., merge buferi, vēsture) ───
+    match /adminData/{docId} {
+      allow read, write: if isAdminOrManager();
+    }
+
+    // Ja izmanto atsevišķas “merge” kolekcijas/rindas adminam:
+    match /merge/{docId} {
+      allow read, write: if isAdminOrManager();
+    }
+  }
+}
