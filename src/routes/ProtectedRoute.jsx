@@ -1,18 +1,24 @@
-// ProtectedRoute.jsx
+// src/routes/ProtectedRoute.jsx
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from './useAuth'; // tavs hooks ap onAuthStateChanged
+import { useAuth } from '../context/AuthContext';
 
-export default function ProtectedRoute({ children, requireAdmin = false }) {
-  const { user, claims, loading } = useAuth();
+export default function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return <div>Loading…</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-sand flex items-center justify-center p-6">
+        <div className="rounded-2xl bg-sandLight shadow-xl ring-1 ring-sandRing p-8 text-brown">
+          Ielāde…
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/auth" replace state={{ from: location }} />;
   }
-  if (requireAdmin && !claims?.admin) {
-    return <Navigate to="/parent" replace />;
-  }
+
   return children;
 }

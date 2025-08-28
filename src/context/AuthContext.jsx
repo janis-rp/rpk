@@ -1,42 +1,134 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebase";
-import { db } from "../db";
-import { doc, getDoc } from "firebase/firestore";
+// src/context/AuthContext.jsx
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  onAuthStateChanged,
+  getIdTokenResult,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+} from 'firebase/auth';
+import { auth } from '../lib/firebase';
+import { ensureParentProfile } from '../lib/createParentProfile';
 
-const AuthContext = createContext(null);
+const AuthCtx = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
-  const [initializing, setInitializing] = useState(true);
+  const [claims, setClaims] = useState(null);
+  const [loading, setLoading] = useState(true); // svarīgi pret “tukšo lapu”
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      if (u) {
-        try {
-          const snap = await getDoc(doc(db, "users", u.uid));
-          setRole(snap.exists() ? snap.data().role : "parent"); // default ja nav
-        } catch {
-          setRole("parent");
+      try {
+        if (!u) {
+          setUser(null);
+          setClaims(null);
+          return;
         }
-      } else {
-        setRole(null);
+        setUser(u);
+        const unsub = onAuthStateChanged(auth, async (u) => {
+          try {
+            if (!u) {
+              setUser(null);
+              setClaims(null);
+              return;
+            }
+            setUser(u);
+            try {
+              await ensureParentProfile(u);
+            } catch (e) {
+              console.warn('ensureParentProfile:', e);
+            }
+            const token = await getIdTokenResult(u, true);
+            setClaims(token.claims || {});
+          } catch (e) {
+            console.error('Auth error:', e);
+          } finally {
+            setLoading(false);
+          }
+        });
+
+        // 🔑 kritiski pēc DB migrācijas: izveido profilu, ja nav
+        try {
+          await ensureParentProfile(u);
+        } catch (e) {
+          console.warn('ensureParentProfile:', e);
+        }
+
+        // custom claims (piem., admin)
+        const token = await getIdTokenResult(u, true);
+        setClaims(token.claims || {});
+      } catch (e) {
+        console.error('Auth error:', e);
+      } finally {
+        setLoading(false);
       }
-      setInitializing(false);
     });
     return () => unsub();
   }, []);
 
-  const isPasswordUser = user?.providerData?.some(p => p.providerId === "password");
-  const isVerified = !!user && (!isPasswordUser || user.emailVerified);
+  // (pēc izvēles) Palīgfunkcijas AuthPage vajadzībām
+  async function loginEmail(email, password) {
+    setLoading(true);
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      await ensureParentProfile(cred.user);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  return (
-    <AuthContext.Provider value={{ user, role, initializing, isVerified }}>
-      {children}
-    </AuthContext.Provider>
+  async function signupEmail(email, password) {
+    setLoading(true);
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await ensureParentProfile(cred.user);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loginGoogle() {
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const cred = await signInWithPopup(auth, provider);
+      await ensureParentProfile(cred.user);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function logout() {
+    setLoading(true);
+    try {
+      await signOut(auth);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const value = useMemo(
+    () => ({
+      user,
+      claims,
+      loading,
+      // pēc izvēles eksponējam metodes:
+      loginEmail,
+      signupEmail,
+      loginGoogle,
+      logout,
+    }),
+    [user, claims, loading],
   );
+
+  return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  const ctx = useContext(AuthCtx);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}

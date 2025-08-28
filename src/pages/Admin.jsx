@@ -1,24 +1,18 @@
-// src/pages/Admin.jsx
 import { useEffect, useMemo, useState } from "react";
 import TopBar from "../components/TopBar";
-import { db } from "../db";
+import { db, app } from "../lib/firebase";
 import {
-  collection, onSnapshot, orderBy, query, updateDoc, doc, serverTimestamp
+  collection, onSnapshot, orderBy, query, updateDoc, doc, serverTimestamp,
+  getDocs, where
 } from "firebase/firestore";
 import { httpsCallable, getFunctions } from "firebase/functions";
-import { app } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 
-const BRANCHES = [
-  { id: "katlakalns", name: "Katlakalns" },
-  { id: "balozi",     name: "Baloži" },
-  { id: "alejas",     name: "Alejas" },
-];
-const branchName = (id) => BRANCHES.find(b => b.id === id)?.name || id;
-const STATUS = ["submitted", "waitlist", "approved", "cancelled"];
+const STATUS_CHILD = ["waitlist","approved","contract","finished","withdrawn"];
+const STATUS_CHILD_LV = { waitlist:"rindā", approved:"apstiprināts", contract:"līgums", finished:"beidzis", withdrawn:"izstājies" };
 
 function AdminActions() {
-  const { user, initializing } = useAuth();
+  const { user, loading: initializing } = useAuth();
   const [unlinkUid, setUnlinkUid] = useState("");
   const [opMsg, setOpMsg] = useState("");
   const [opErr, setOpErr] = useState("");
@@ -26,9 +20,7 @@ function AdminActions() {
   async function handleUnlink() {
     setOpMsg(""); setOpErr("");
     if (!user) { setOpErr("Tu neesi ielogojies (vai sesija beigusies)."); return; }
-
     try {
-      // us-central1 — tur arī ir deploy
       const fns = getFunctions(app, "us-central1");
       const fn = httpsCallable(fns, "adminUnlinkPhone");
       await fn({ uid: unlinkUid.trim() });
@@ -64,22 +56,32 @@ function AdminActions() {
 }
 
 export default function Admin() {
-  const [apps, setApps] = useState([]);
+  const [apps, setApps] = useState([]);        // pieteikumi (kā iepriekš)
+  const [children, setChildren] = useState([]);// bērnu saraksts (jauns)
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [selectedParent, setSelectedParent] = useState(null);
+  const [parentProfile, setParentProfile] = useState(null);
 
+  // Pieteikumi — atstājam kā tev bija
   useEffect(() => {
     setLoading(true);
     setErr("");
     const q = query(collection(db, "applications"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(
       q,
-      (snap) => {
-        setApps(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-      },
+      (snap) => { setApps(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoading(false); },
       (e) => { setErr("Neizdevās ielādēt pieteikumus. " + (e?.message||"")); setLoading(false); }
     );
+    return () => unsub();
+  }, []);
+
+  // Bērnu saraksts adminam (vienkāršs snapshot visiem)
+  useEffect(() => {
+    const q = query(collection(db, "child"), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q, (snap) => {
+      setChildren(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
     return () => unsub();
   }, []);
 
@@ -91,8 +93,16 @@ export default function Admin() {
     }
   }
 
+  async function openParentProfile(parentId) {
+    setSelectedParent(parentId);
+    setParentProfile(null);
+    const pSnap = await getDocs(query(collection(db, "parent"), where("__name__", "==", parentId)));
+    const p = pSnap.docs[0]?.exists() ? { id: pSnap.docs[0].id, ...pSnap.docs[0].data() } : null;
+    setParentProfile(p);
+  }
+
   const totalByStatus = useMemo(() => {
-    const m = Object.fromEntries(STATUS.map(s => [s, 0]));
+    const m = { submitted:0, waitlist:0, approved:0, cancelled:0 };
     for (const a of apps) m[a.status] = (m[a.status] || 0) + 1;
     return m;
   }, [apps]);
@@ -101,16 +111,15 @@ export default function Admin() {
     <div className="min-h-screen bg-sand">
       <TopBar />
       <div className="mx-auto max-w-6xl p-6 space-y-6">
-        {/* Admin rīki */}
         <AdminActions />
 
+        {/* Pieteikumi (kā bija) */}
         <div className="rounded-2xl bg-sandLight shadow-xl ring-1 ring-sandRing p-6">
           <h1 className="text-2xl font-semibold text-brown mb-2">Pieteikumi</h1>
           {loading && <div className="text-brown/70">Ielādē...</div>}
           {err && <div className="text-red-600 text-sm">{err}</div>}
-
           <div className="flex flex-wrap gap-3 text-sm text-brown/80 mt-3">
-            {STATUS.map(s => (
+            {Object.keys(totalByStatus).map(s => (
               <div key={s} className="rounded-xl border border-sandBorder bg-white px-3 py-2">
                 {s}: <b>{totalByStatus[s] ?? 0}</b>
               </div>
@@ -121,42 +130,46 @@ export default function Admin() {
           </div>
         </div>
 
+        {/* Bērnu saraksts */}
         <div className="rounded-2xl bg-sandLight shadow-xl ring-1 ring-sandRing p-6">
+          <h2 className="text-lg font-semibold text-brown mb-3">Bērnu saraksts</h2>
           <div className="grid gap-3">
-            {apps.map(a => (
-              <div key={a.id} className="rounded-xl border border-sandBorder bg-white p-4">
+            {children.map(c => (
+              <div key={c.id} className="rounded-xl border border-sandBorder bg-white p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="text-brown">
-                    <div className="font-semibold">
-                      {a.child?.firstName} {a.child?.lastName}{" "}
-                      <span className="text-xs text-brown/60">({a.child?.dob || "-"})</span>
-                    </div>
-                    <div className="text-sm text-brown/80">
-                      {a.anyBranch
-                        ? "Der jebkura filiāle"
-                        : `Prioritātes: ${a.branchPrefs?.map(branchName).join(" → ") || "-"}`}
-                    </div>
-                    {a.notes && <div className="text-sm text-brown/70 mt-1">Piezīmes: {a.notes}</div>}
-                    <div className="text-xs mt-1">
-                      Vecāks: <span className="font-medium">{a.parentId}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-brown/70">Statuss</label>
-                    <select
-                      value={a.status}
-                      onChange={(e) => changeStatus(a.id, e.target.value)}
-                      className="rounded-xl border border-sandBorder bg-white px-3 py-2 text-brown"
-                    >
-                      {STATUS.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    <div className="font-semibold">{c.fullName || c.name}</div>
+                    <div className="text-sm text-brown/80">Statuss: {STATUS_CHILD_LV[c.status] || "-"}</div>
+                    {Array.isArray(c.parentIds) && c.parentIds.length > 0 && (
+                      <div className="text-xs mt-1">
+                        Vecāki:{" "}
+                        {c.parentIds.map(pid => (
+                          <button key={pid} className="underline mr-2" onClick={() => openParentProfile(pid)}>
+                            {pid}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
-            {apps.length === 0 && !loading && <div className="text-brown/70">Nav pieteikumu.</div>}
+            {children.length === 0 && <div className="text-brown/70">Nav bērnu datu.</div>}
           </div>
+        </div>
+
+        {/* Vecāka profils (skatāms labajā pusē) */}
+        <div className="rounded-2xl bg-sandLight shadow-xl ring-1 ring-sandRing p-6">
+          <h2 className="text-lg font-semibold text-brown mb-3">Vecāka profils</h2>
+          {!selectedParent && <div>Izvēlies vecāku no saraksta.</div>}
+          {selectedParent && !parentProfile && <div>Ielāde…</div>}
+          {parentProfile && (
+            <div className="p-4 rounded-2xl ring-1 ring-sandRing bg-white">
+              <div className="font-semibold">{parentProfile.fullName || parentProfile.name}</div>
+              <div className="text-sm opacity-70">UID: {parentProfile.id}</div>
+              {/* šeit pievieno kontaktus, līgumus u.c. laukus */}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -23,6 +23,7 @@
 
 # Tests
 **/coverage/
+!docs/**
 
 # Firebase
 .firebase/

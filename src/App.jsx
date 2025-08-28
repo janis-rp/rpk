@@ -40,6 +40,8 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            // App.jsx – pievieno šo maršrutu bloku klāt jau esošajiem:
+            <Route path="/login" element={<Navigate to="/auth" replace />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route
               path="/parent"
