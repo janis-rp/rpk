@@ -1,22 +1,18 @@
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+// ProtectedRoute.jsx
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from './useAuth'; // tavs hooks ap onAuthStateChanged
 
-export default function ProtectedRoute() {
-  const { user, role } = useAuth?.() || {};
+export default function ProtectedRoute({ children, requireAdmin = false }) {
+  const { user, claims, loading } = useAuth();
+  const location = useLocation();
 
-  // Ja nav zināms statuss (gaidām context ielādi)
-  if (user === undefined || role === undefined) {
-    return (
-      <div className="min-h-screen bg-sand flex items-center justify-center p-6">
-        <div className="rounded-2xl bg-sandLight shadow-xl ring-1 ring-sandRing p-8 text-brown">
-          Ielāde…
-        </div>
-      </div>
-    );
+  if (loading) return <div>Loading…</div>;
+
+  if (!user) {
+    return <Navigate to="/auth" replace state={{ from: location }} />;
   }
-
-  // Neielogots -> uz /login
-  if (!user) return <Navigate to="/login" replace />;
-
-  return <Outlet />;
+  if (requireAdmin && !claims?.admin) {
+    return <Navigate to="/parent" replace />;
+  }
+  return children;
 }
